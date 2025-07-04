@@ -174,8 +174,10 @@
             };
           };
 
-          config = mkIf cfg.enable {
-            virtualisation.arion.projects.twenty = {
+          config = {
+            virtualisation.arion.backend = "podman-socket";
+            
+            virtualisation.arion.projects.twenty = mkIf cfg.enable {
               serviceName = "twenty";
               settings = {
                 imports = [ 
