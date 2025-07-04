@@ -173,6 +173,11 @@ in
         };
         
         restart = "always";
+        
+        # Explicitly enable the service (ensure it starts)
+        deploy = {
+          replicas = 1;
+        };
       };
     };
 
