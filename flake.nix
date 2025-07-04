@@ -3,11 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    arion.url = "github:hercules-ci/arion";
-    arion.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, arion }:
+  outputs = { self, nixpkgs }:
     {
       # Export the nixos modules for easy importing
       nixosModules.default = { config, lib, pkgs, ... }:
@@ -16,9 +14,6 @@
           cfg = config.services.twenty-crm;
         in
         {
-          imports = [
-            arion.nixosModules.arion
-          ];
 
           options.services.twenty-crm = {
             enable = mkEnableOption "Twenty CRM";
@@ -174,20 +169,9 @@
             };
           };
 
-          config = {
-            virtualisation.arion.backend = "podman-socket";
-            
-            virtualisation.arion.projects.twenty = mkIf cfg.enable {
-              serviceName = "twenty";
-              settings = {
-                imports = [ 
-                  (import ./arion-compose.nix {
-                    inherit pkgs lib;
-                    config = cfg;
-                  })
-                ];
-              };
-            };
+          config = mkIf cfg.enable {
+            # Twenty CRM configuration options are defined but implementation
+            # is handled by the importing system (newton) which configures Arion
           };
         };
     };
