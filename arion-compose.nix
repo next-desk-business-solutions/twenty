@@ -40,7 +40,7 @@ let
   };
 
   # Use provided config or fallback to defaults
-  cfg = if config != null then config else defaultConfig;
+  cfg = defaultConfig // (if config != null then config else {});
 
   # Helper function to read file content at runtime
   readSecret = file: if file != null then "$(cat ${file})" else null;
@@ -124,9 +124,8 @@ in
   services = {
     # Twenty CRM Server
     server = {
-      image.name = "twentycrm/twenty:latest";
-      
       service = {
+        image = "twentycrm/twenty:latest";
         ports = [ "${toString cfg.port}:3000" ];
         
         volumes = [
@@ -154,9 +153,8 @@ in
 
     # Twenty CRM Worker
     worker = {
-      image.name = "twentycrm/twenty:latest";
-      
       service = {
+        image = "twentycrm/twenty:latest";
         command = [ "yarn" "worker:prod" ];
         
         volumes = [
@@ -184,16 +182,18 @@ in
 
     # PostgreSQL Database
     db = {
-      image.name = "postgres:16";
-      
       service = {
+        image = "postgres:16";
         volumes = [
           "db-data:/var/lib/postgresql/data"
         ];
         
         environment = {
           POSTGRES_USER = "twenty";
-          POSTGRES_PASSWORD = readSecret cfg.database.passwordFile;
+          POSTGRES_PASSWORD = 
+            if cfg.database.passwordFile != null 
+            then readSecret cfg.database.passwordFile
+            else "postgres";
           POSTGRES_DB = "default";
         };
         
@@ -210,9 +210,8 @@ in
 
     # Redis Cache
     redis = {
-      image.name = "redis:latest";
-      
       service = {
+        image = "redis:latest";
         command = [ "--maxmemory-policy" "noeviction" ];
         restart = "always";
       };
