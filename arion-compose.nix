@@ -192,12 +192,13 @@ in
         ];
         
         environment = {
-          POSTGRES_USER = "postgres";
-          POSTGRES_PASSWORD = "postgres";
+          POSTGRES_USER = "twenty";
+          POSTGRES_PASSWORD = readSecret cfg.database.passwordFile;
+          POSTGRES_DB = "default";
         };
         
         healthcheck = {
-          test = [ "CMD" "pg_isready" "-U" "postgres" "-h" "localhost" "-d" "postgres" ];
+          test = [ "CMD" "pg_isready" "-U" "twenty" "-h" "localhost" "-d" "default" ];
           interval = "5s";
           timeout = "5s";
           retries = 10;
