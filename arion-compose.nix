@@ -172,7 +172,7 @@ in
           };
         };
         
-        restart = "always";
+        restart = "unless-stopped";
       };
     };
 
