@@ -187,11 +187,11 @@ in
         environment = {
           POSTGRES_USER = cfg.database.user;
           POSTGRES_PASSWORD = cfg.database.password or "postgres";
-          POSTGRES_DB = "default";
+          # Don't set POSTGRES_DB - let Twenty create the 'default' database
         };
         
         healthcheck = {
-          test = [ "CMD" "pg_isready" "-U" "${cfg.database.user}" "-h" "localhost" "-d" "default" ];
+          test = [ "CMD" "pg_isready" "-U" "${cfg.database.user}" "-h" "localhost" "-d" "postgres" ];
           interval = "5s";
           timeout = "5s";
           retries = 10;
