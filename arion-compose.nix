@@ -11,8 +11,10 @@ let
     };
     database = {
       user = "postgres";
+      password = "postgres";
       passwordFile = null;
     };
+    appSecret = "replace_me_with_a_random_string";
     appSecretFile = null;
     auth = {
       google = { 
@@ -52,10 +54,10 @@ let
     STORAGE_TYPE = cfg.storage.type;
   };
   
-  secretEnv = lib.optionalAttrs (cfg.appSecretFile != null) {
-    APP_SECRET = readSecret cfg.appSecretFile;
-  } // lib.optionalAttrs (cfg.database.passwordFile != null) {
-    PG_DATABASE_URL = "postgres://${cfg.database.user}:$(cat ${cfg.database.passwordFile})@db:5432/default";
+  secretEnv = lib.optionalAttrs (cfg.appSecret or null != null) {
+    APP_SECRET = cfg.appSecret;
+  } // lib.optionalAttrs (cfg.database.password or null != null) {
+    PG_DATABASE_URL = "postgres://${cfg.database.user}:${cfg.database.password}@db:5432/default";
   } // lib.optionalAttrs (cfg.storage.type == "s3") (
     lib.optionalAttrs (cfg.storage.s3.region != null) {
       STORAGE_S3_REGION = cfg.storage.s3.region;
@@ -107,15 +109,9 @@ let
   
   # Fallback values for required env vars
   environment = baseEnv // secretEnv // {
-    PG_DATABASE_URL = 
-      if cfg.database.passwordFile != null 
-      then "postgres://${cfg.database.user}:$(cat ${cfg.database.passwordFile})@db:5432/default"
-      else "postgres://${cfg.database.user}:postgres@db:5432/default";
+    PG_DATABASE_URL = "postgres://${cfg.database.user}:${cfg.database.password or "postgres"}@db:5432/default";
     REDIS_URL = "redis://redis:6379";
-    APP_SECRET = 
-      if cfg.appSecretFile != null 
-      then readSecret cfg.appSecretFile
-      else "replace_me_with_a_random_string";
+    APP_SECRET = cfg.appSecret or "replace_me_with_a_random_string";
   };
 in
 {
@@ -189,16 +185,13 @@ in
         ];
         
         environment = {
-          POSTGRES_USER = "twenty";
-          POSTGRES_PASSWORD = 
-            if cfg.database.passwordFile != null 
-            then readSecret cfg.database.passwordFile
-            else "postgres";
+          POSTGRES_USER = cfg.database.user;
+          POSTGRES_PASSWORD = cfg.database.password or "postgres";
           POSTGRES_DB = "default";
         };
         
         healthcheck = {
-          test = [ "CMD" "pg_isready" "-U" "twenty" "-h" "localhost" "-d" "default" ];
+          test = [ "CMD" "pg_isready" "-U" "${cfg.database.user}" "-h" "localhost" "-d" "default" ];
           interval = "5s";
           timeout = "5s";
           retries = 10;
