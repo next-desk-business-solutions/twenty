@@ -1,79 +1,120 @@
-{ pkgs, lib, config }:
+{ pkgs, lib ? pkgs.lib, config ? null, ... }:
 
 let
+  # Default configuration for local development
+  defaultConfig = {
+    port = 3000;
+    serverUrl = "http://localhost:3000";
+    storage = {
+      type = "local";
+      s3 = {};
+    };
+    database = {
+      user = "postgres";
+      passwordFile = null;
+    };
+    appSecretFile = null;
+    auth = {
+      google = { 
+        enabled = false;
+        clientIdFile = null;
+        clientSecretFile = null;
+      };
+      microsoft = { 
+        enabled = false;
+        clientIdFile = null;
+        clientSecretFile = null;
+      };
+    };
+    email = { 
+      driver = null;
+      fromAddress = null;
+      fromName = null;
+      smtp = {
+        host = null;
+        port = null;
+        userFile = null;
+        passwordFile = null;
+      };
+    };
+  };
+
+  # Use provided config or fallback to defaults
+  cfg = if config != null then config else defaultConfig;
+
   # Helper function to read file content at runtime
   readSecret = file: if file != null then "$(cat ${file})" else null;
   
   # Build environment variables dynamically
   baseEnv = {
-    NODE_PORT = toString config.port;
-    SERVER_URL = config.serverUrl;
-    STORAGE_TYPE = config.storage.type;
+    NODE_PORT = toString cfg.port;
+    SERVER_URL = cfg.serverUrl;
+    STORAGE_TYPE = cfg.storage.type;
   };
   
-  secretEnv = lib.optionalAttrs (config.appSecretFile != null) {
-    APP_SECRET = readSecret config.appSecretFile;
-  } // lib.optionalAttrs (config.database.passwordFile != null) {
-    PG_DATABASE_URL = "postgres://${config.database.user}:$(cat ${config.database.passwordFile})@db:5432/default";
-  } // lib.optionalAttrs (config.storage.type == "s3") (
-    lib.optionalAttrs (config.storage.s3.region != null) {
-      STORAGE_S3_REGION = config.storage.s3.region;
-    } // lib.optionalAttrs (config.storage.s3.bucket != null) {
-      STORAGE_S3_NAME = config.storage.s3.bucket;
-    } // lib.optionalAttrs (config.storage.s3.endpoint != null) {
-      STORAGE_S3_ENDPOINT = config.storage.s3.endpoint;
+  secretEnv = lib.optionalAttrs (cfg.appSecretFile != null) {
+    APP_SECRET = readSecret cfg.appSecretFile;
+  } // lib.optionalAttrs (cfg.database.passwordFile != null) {
+    PG_DATABASE_URL = "postgres://${cfg.database.user}:$(cat ${cfg.database.passwordFile})@db:5432/default";
+  } // lib.optionalAttrs (cfg.storage.type == "s3") (
+    lib.optionalAttrs (cfg.storage.s3.region != null) {
+      STORAGE_S3_REGION = cfg.storage.s3.region;
+    } // lib.optionalAttrs (cfg.storage.s3.bucket != null) {
+      STORAGE_S3_NAME = cfg.storage.s3.bucket;
+    } // lib.optionalAttrs (cfg.storage.s3.endpoint != null) {
+      STORAGE_S3_ENDPOINT = cfg.storage.s3.endpoint;
     }
-  ) // lib.optionalAttrs config.auth.google.enabled (
-    lib.optionalAttrs (config.auth.google.clientIdFile != null) {
-      AUTH_GOOGLE_CLIENT_ID = readSecret config.auth.google.clientIdFile;
-    } // lib.optionalAttrs (config.auth.google.clientSecretFile != null) {
-      AUTH_GOOGLE_CLIENT_SECRET = readSecret config.auth.google.clientSecretFile;
+  ) // lib.optionalAttrs cfg.auth.google.enabled (
+    lib.optionalAttrs (cfg.auth.google.clientIdFile != null) {
+      AUTH_GOOGLE_CLIENT_ID = readSecret cfg.auth.google.clientIdFile;
+    } // lib.optionalAttrs (cfg.auth.google.clientSecretFile != null) {
+      AUTH_GOOGLE_CLIENT_SECRET = readSecret cfg.auth.google.clientSecretFile;
     } // {
       MESSAGING_PROVIDER_GMAIL_ENABLED = "true";
       CALENDAR_PROVIDER_GOOGLE_ENABLED = "true";
-      AUTH_GOOGLE_CALLBACK_URL = "${config.serverUrl}/auth/google/callback";
-      AUTH_GOOGLE_APIS_CALLBACK_URL = "${config.serverUrl}/auth/google-apis/callback";
+      AUTH_GOOGLE_CALLBACK_URL = "${cfg.serverUrl}/auth/google/callback";
+      AUTH_GOOGLE_APIS_CALLBACK_URL = "${cfg.serverUrl}/auth/google-apis/callback";
     }
-  ) // lib.optionalAttrs config.auth.microsoft.enabled (
-    lib.optionalAttrs (config.auth.microsoft.clientIdFile != null) {
-      AUTH_MICROSOFT_CLIENT_ID = readSecret config.auth.microsoft.clientIdFile;
-    } // lib.optionalAttrs (config.auth.microsoft.clientSecretFile != null) {
-      AUTH_MICROSOFT_CLIENT_SECRET = readSecret config.auth.microsoft.clientSecretFile;
+  ) // lib.optionalAttrs cfg.auth.microsoft.enabled (
+    lib.optionalAttrs (cfg.auth.microsoft.clientIdFile != null) {
+      AUTH_MICROSOFT_CLIENT_ID = readSecret cfg.auth.microsoft.clientIdFile;
+    } // lib.optionalAttrs (cfg.auth.microsoft.clientSecretFile != null) {
+      AUTH_MICROSOFT_CLIENT_SECRET = readSecret cfg.auth.microsoft.clientSecretFile;
     } // {
       CALENDAR_PROVIDER_MICROSOFT_ENABLED = "true";
       MESSAGING_PROVIDER_MICROSOFT_ENABLED = "true";
       AUTH_MICROSOFT_ENABLED = "true";
-      AUTH_MICROSOFT_CALLBACK_URL = "${config.serverUrl}/auth/microsoft/callback";
-      AUTH_MICROSOFT_APIS_CALLBACK_URL = "${config.serverUrl}/auth/microsoft-apis/callback";
+      AUTH_MICROSOFT_CALLBACK_URL = "${cfg.serverUrl}/auth/microsoft/callback";
+      AUTH_MICROSOFT_APIS_CALLBACK_URL = "${cfg.serverUrl}/auth/microsoft-apis/callback";
     }
-  ) // lib.optionalAttrs (config.email.driver != null) (
+  ) // lib.optionalAttrs (cfg.email.driver != null) (
     {
-      EMAIL_DRIVER = config.email.driver;
-    } // lib.optionalAttrs (config.email.fromAddress != null) {
-      EMAIL_FROM_ADDRESS = config.email.fromAddress;
-    } // lib.optionalAttrs (config.email.fromName != null) {
-      EMAIL_FROM_NAME = config.email.fromName;
-    } // lib.optionalAttrs (config.email.smtp.host != null) {
-      EMAIL_SMTP_HOST = config.email.smtp.host;
-    } // lib.optionalAttrs (config.email.smtp.port != null) {
-      EMAIL_SMTP_PORT = toString config.email.smtp.port;
-    } // lib.optionalAttrs (config.email.smtp.userFile != null) {
-      EMAIL_SMTP_USER = readSecret config.email.smtp.userFile;
-    } // lib.optionalAttrs (config.email.smtp.passwordFile != null) {
-      EMAIL_SMTP_PASSWORD = readSecret config.email.smtp.passwordFile;
+      EMAIL_DRIVER = cfg.email.driver;
+    } // lib.optionalAttrs (cfg.email.fromAddress != null) {
+      EMAIL_FROM_ADDRESS = cfg.email.fromAddress;
+    } // lib.optionalAttrs (cfg.email.fromName != null) {
+      EMAIL_FROM_NAME = cfg.email.fromName;
+    } // lib.optionalAttrs (cfg.email.smtp.host != null) {
+      EMAIL_SMTP_HOST = cfg.email.smtp.host;
+    } // lib.optionalAttrs (cfg.email.smtp.port != null) {
+      EMAIL_SMTP_PORT = toString cfg.email.smtp.port;
+    } // lib.optionalAttrs (cfg.email.smtp.userFile != null) {
+      EMAIL_SMTP_USER = readSecret cfg.email.smtp.userFile;
+    } // lib.optionalAttrs (cfg.email.smtp.passwordFile != null) {
+      EMAIL_SMTP_PASSWORD = readSecret cfg.email.smtp.passwordFile;
     }
   );
   
   # Fallback values for required env vars
   environment = baseEnv // secretEnv // {
     PG_DATABASE_URL = 
-      if config.database.passwordFile != null 
-      then "postgres://${config.database.user}:$(cat ${config.database.passwordFile})@db:5432/default"
-      else "postgres://${config.database.user}:postgres@db:5432/default";
+      if cfg.database.passwordFile != null 
+      then "postgres://${cfg.database.user}:$(cat ${cfg.database.passwordFile})@db:5432/default"
+      else "postgres://${cfg.database.user}:postgres@db:5432/default";
     REDIS_URL = "redis://redis:6379";
     APP_SECRET = 
-      if config.appSecretFile != null 
-      then readSecret config.appSecretFile
+      if cfg.appSecretFile != null 
+      then readSecret cfg.appSecretFile
       else "replace_me_with_a_random_string";
   };
 in
@@ -86,7 +127,7 @@ in
       image.name = "twentycrm/twenty:latest";
       
       service = {
-        ports = [ "${toString config.port}:3000" ];
+        ports = [ "${toString cfg.port}:3000" ];
         
         volumes = [
           "server-local-data:/app/packages/twenty-server/.local-storage"

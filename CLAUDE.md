@@ -259,6 +259,25 @@ This repository includes a Nix flake that provides declarative deployment via Ar
 ### Deployment
 Import the flake in your NixOS configuration and rebuild. Twenty CRM containers will be automatically managed by systemd - no manual `arion up` or `docker compose` commands needed.
 
+### Local Development
+For local development and testing, you can use Arion directly:
+
+```bash
+# Install Arion (if not already available)
+nix-shell -p arion
+
+# Start Twenty CRM locally
+arion up -d
+
+# View logs
+arion logs -f
+
+# Stop services
+arion down
+```
+
+The `arion-compose.nix` file includes sensible defaults for local development (localhost, default ports, etc.).
+
 ## Resources
 
 - [Official Documentation](https://twenty.com/developers)
