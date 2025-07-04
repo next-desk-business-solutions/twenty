@@ -125,7 +125,6 @@ in
     # Twenty CRM Server
     server = {
       image.name = "twentycrm/twenty:latest";
-      image.dockerTools = false;
       
       service = {
         ports = [ "${toString cfg.port}:3000" ];
@@ -186,7 +185,6 @@ in
     # PostgreSQL Database
     db = {
       image.name = "postgres:16";
-      image.dockerTools = false;
       
       service = {
         volumes = [
@@ -212,7 +210,6 @@ in
     # Redis Cache
     redis = {
       image.name = "redis:latest";
-      image.dockerTools = false;
       
       service = {
         command = [ "--maxmemory-policy" "noeviction" ];
