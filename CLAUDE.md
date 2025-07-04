@@ -146,8 +146,44 @@ Twenty includes a Nix flake with Arion configuration for declarative deployment 
       modules = [
         twenty.nixosModules.default
         {
-          # Twenty CRM will be automatically managed by systemd
-          # No manual intervention needed - containers start with system
+          services.twenty-crm = {
+            enable = true;
+            serverUrl = "https://crm.example.com";
+            port = 3000;
+            
+            # Secure secret management
+            appSecretFile = "/run/secrets/twenty-app-secret";
+            database.passwordFile = "/run/secrets/twenty-db-password";
+            
+            # Optional: S3 storage
+            storage = {
+              type = "s3";
+              s3 = {
+                region = "us-east-1";
+                bucket = "my-twenty-storage";
+              };
+            };
+            
+            # Optional: Authentication providers
+            auth.google = {
+              enabled = true;
+              clientIdFile = "/run/secrets/google-client-id";
+              clientSecretFile = "/run/secrets/google-client-secret";
+            };
+            
+            # Optional: Email configuration
+            email = {
+              driver = "smtp";
+              fromAddress = "noreply@example.com";
+              fromName = "My Company CRM";
+              smtp = {
+                host = "smtp.gmail.com";
+                port = 587;
+                userFile = "/run/secrets/smtp-user";
+                passwordFile = "/run/secrets/smtp-password";
+              };
+            };
+          };
         }
       ];
     };
