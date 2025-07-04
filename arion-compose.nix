@@ -211,23 +211,9 @@ in
     };
   };
 
-  # Docker volumes with custom location
+  # Docker volumes
   docker-compose.volumes = {
-    db-data = {
-      driver = "local";
-      driver_opts = {
-        type = "none";
-        o = "bind";
-        device = "${cfg.storage.dataPath}/postgres";
-      };
-    };
-    server-local-data = {
-      driver = "local";
-      driver_opts = {
-        type = "none";
-        o = "bind";
-        device = "${cfg.storage.dataPath}/twenty-files";
-      };
-    };
+    db-data = {};
+    server-local-data = {};
   };
 }
