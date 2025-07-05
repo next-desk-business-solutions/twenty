@@ -109,18 +109,20 @@ let
     }
   );
   
-  # Fallback values for required env vars
-  environment = baseEnv // secretEnv // {
-    PG_DATABASE_URL = 
-      if cfg.database.passwordFile != null then "postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
-      else "postgres://${cfg.database.user}:${cfg.database.password or "postgres"}@db:5432/default";
-    REDIS_URL = "redis://redis:6379";
-    APP_SECRET = 
-      if cfg.appSecretFile != null then "$(cat /secrets/twenty-app-secret)"
-      else cfg.appSecret or "replace_me_with_a_random_string";
-  } // lib.optionalAttrs (cfg.database.passwordFile != null) {
-    POSTGRES_PASSWORD_FILE = "/secrets/twenty-db-password";
-  };
+  # Environment variables for containers
+  environment = 
+    if cfg.database.passwordFile != null || cfg.appSecretFile != null
+    then baseEnv # Only non-secret environment variables
+    else baseEnv // secretEnv // {
+      PG_DATABASE_URL = "postgres://${cfg.database.user}:${cfg.database.password or "postgres"}@db:5432/default";
+      REDIS_URL = "redis://redis:6379";
+      APP_SECRET = cfg.appSecret or "replace_me_with_a_random_string";
+    };
+  
+  # Environment file for containers when using secrets
+  envFile = lib.optionals (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
+    "/run/twenty/env"
+  ];
   
   # Volume mounts for secrets
   secretVolumes = lib.optionals (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
@@ -143,19 +145,7 @@ in
         
         environment = environment;
         
-        command = lib.mkIf (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
-          "sh"
-          "-c"
-          ''
-            ${lib.optionalString (cfg.database.passwordFile != null) ''
-              export PG_DATABASE_URL="postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
-            ''}
-            ${lib.optionalString (cfg.appSecretFile != null) ''
-              export APP_SECRET="$(cat /secrets/twenty-app-secret)"
-            ''}
-            exec node dist/src/main
-          ''
-        ];
+        env_file = envFile;
         
         depends_on = {
           db = {
@@ -189,22 +179,9 @@ in
           DISABLE_CRON_JOBS_REGISTRATION = "true";
         };
         
-        command = lib.mkMerge [
-          (lib.mkIf (cfg.database.passwordFile == null && cfg.appSecretFile == null) [ "yarn" "worker:prod" ])
-          (lib.mkIf (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
-            "sh"
-            "-c"
-            ''
-              ${lib.optionalString (cfg.database.passwordFile != null) ''
-                export PG_DATABASE_URL="postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
-              ''}
-              ${lib.optionalString (cfg.appSecretFile != null) ''
-                export APP_SECRET="$(cat /secrets/twenty-app-secret)"
-              ''}
-              exec yarn worker:prod
-            ''
-          ])
-        ];
+        env_file = envFile;
+        
+        command = [ "yarn" "worker:prod" ];
         
         depends_on = {
           db = {
