@@ -143,15 +143,17 @@ in
         
         environment = environment;
         
-        entrypoint = lib.mkIf (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
-          "sh" "-c" ''
+        command = lib.mkIf (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
+          "sh"
+          "-c"
+          ''
             ${lib.optionalString (cfg.database.passwordFile != null) ''
               export PG_DATABASE_URL="postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
             ''}
             ${lib.optionalString (cfg.appSecretFile != null) ''
               export APP_SECRET="$(cat /secrets/twenty-app-secret)"
             ''}
-            exec /app/entrypoint.sh "$@"
+            exec /app/entrypoint.sh node dist/src/main
           ''
         ];
         
@@ -176,7 +178,6 @@ in
     worker = {
       service = {
         image = "twentycrm/twenty:latest";
-        command = [ "yarn" "worker:prod" ];
         
         volumes = [
           "server-local-data:/app/packages/twenty-server/.local-storage"
@@ -188,16 +189,21 @@ in
           DISABLE_CRON_JOBS_REGISTRATION = "true";
         };
         
-        entrypoint = lib.mkIf (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
-          "sh" "-c" ''
-            ${lib.optionalString (cfg.database.passwordFile != null) ''
-              export PG_DATABASE_URL="postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
-            ''}
-            ${lib.optionalString (cfg.appSecretFile != null) ''
-              export APP_SECRET="$(cat /secrets/twenty-app-secret)"
-            ''}
-            exec /app/entrypoint.sh "$@"
-          ''
+        command = lib.mkMerge [
+          (lib.mkIf (cfg.database.passwordFile == null && cfg.appSecretFile == null) [ "yarn" "worker:prod" ])
+          (lib.mkIf (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
+            "sh"
+            "-c"
+            ''
+              ${lib.optionalString (cfg.database.passwordFile != null) ''
+                export PG_DATABASE_URL="postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
+              ''}
+              ${lib.optionalString (cfg.appSecretFile != null) ''
+                export APP_SECRET="$(cat /secrets/twenty-app-secret)"
+              ''}
+              exec /app/entrypoint.sh yarn worker:prod
+            ''
+          ])
         ];
         
         depends_on = {
