@@ -44,9 +44,6 @@ let
   # Use provided config or fallback to defaults
   cfg = defaultConfig // (if config != null then config else {});
 
-  # Helper function to read file content at runtime
-  readSecret = file: if file != null then "$(cat ${file})" else null;
-  
   # Build environment variables dynamically
   baseEnv = {
     NODE_PORT = toString cfg.port;
@@ -56,8 +53,13 @@ let
   
   secretEnv = lib.optionalAttrs (cfg.appSecret or null != null) {
     APP_SECRET = cfg.appSecret;
+  } // lib.optionalAttrs (cfg.appSecretFile or null != null) {
+    APP_SECRET_FILE = "/secrets/twenty-app-secret";
   } // lib.optionalAttrs (cfg.database.password or null != null) {
     PG_DATABASE_URL = "postgres://${cfg.database.user}:${cfg.database.password}@db:5432/default";
+  } // lib.optionalAttrs (cfg.database.passwordFile or null != null) {
+    POSTGRES_PASSWORD_FILE = "/secrets/twenty-db-password";
+    PG_DATABASE_URL = "postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default";
   } // lib.optionalAttrs (cfg.storage.type == "s3") (
     lib.optionalAttrs (cfg.storage.s3.region != null) {
       STORAGE_S3_REGION = cfg.storage.s3.region;
@@ -109,10 +111,21 @@ let
   
   # Fallback values for required env vars
   environment = baseEnv // secretEnv // {
-    PG_DATABASE_URL = "postgres://${cfg.database.user}:${cfg.database.password or "postgres"}@db:5432/default";
+    PG_DATABASE_URL = 
+      if cfg.database.passwordFile != null then "postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
+      else "postgres://${cfg.database.user}:${cfg.database.password or "postgres"}@db:5432/default";
     REDIS_URL = "redis://redis:6379";
-    APP_SECRET = cfg.appSecret or "replace_me_with_a_random_string";
+    APP_SECRET = 
+      if cfg.appSecretFile != null then "$(cat /secrets/twenty-app-secret)"
+      else cfg.appSecret or "replace_me_with_a_random_string";
+  } // lib.optionalAttrs (cfg.database.passwordFile != null) {
+    POSTGRES_PASSWORD_FILE = "/secrets/twenty-db-password";
   };
+  
+  # Volume mounts for secrets
+  secretVolumes = lib.optionals (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
+    "/run/agenix:/secrets:ro"
+  ];
 in
 {
   project.name = "twenty";
@@ -126,7 +139,7 @@ in
         
         volumes = [
           "server-local-data:/app/packages/twenty-server/.local-storage"
-        ];
+        ] ++ secretVolumes;
         
         environment = environment;
         
@@ -155,7 +168,7 @@ in
         
         volumes = [
           "server-local-data:/app/packages/twenty-server/.local-storage"
-        ];
+        ] ++ secretVolumes;
         
         environment = environment // {
           # Disable migrations and cron registration for worker
@@ -182,13 +195,16 @@ in
         image = "postgres:16";
         volumes = [
           "db-data:/var/lib/postgresql/data"
-        ];
+        ] ++ secretVolumes;
         
         environment = {
           POSTGRES_USER = cfg.database.user;
-          POSTGRES_PASSWORD = cfg.database.password or "postgres";
           # Don't set POSTGRES_DB - let Twenty create the 'default' database
-        };
+        } // (if cfg.database.passwordFile != null then {
+          POSTGRES_PASSWORD_FILE = "/secrets/twenty-db-password";
+        } else {
+          POSTGRES_PASSWORD = cfg.database.password or "postgres";
+        });
         
         healthcheck = {
           test = [ "CMD" "pg_isready" "-U" "${cfg.database.user}" "-h" "localhost" "-d" "postgres" ];
