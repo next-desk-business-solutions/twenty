@@ -143,6 +143,18 @@ in
         
         environment = environment;
         
+        entrypoint = lib.mkIf (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
+          "sh" "-c" ''
+            ${lib.optionalString (cfg.database.passwordFile != null) ''
+              export PG_DATABASE_URL="postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
+            ''}
+            ${lib.optionalString (cfg.appSecretFile != null) ''
+              export APP_SECRET="$(cat /secrets/twenty-app-secret)"
+            ''}
+            exec /app/entrypoint.sh "$@"
+          ''
+        ];
+        
         depends_on = {
           db = {
             condition = "service_healthy";
@@ -175,6 +187,18 @@ in
           DISABLE_DB_MIGRATIONS = "true";
           DISABLE_CRON_JOBS_REGISTRATION = "true";
         };
+        
+        entrypoint = lib.mkIf (cfg.database.passwordFile != null || cfg.appSecretFile != null) [
+          "sh" "-c" ''
+            ${lib.optionalString (cfg.database.passwordFile != null) ''
+              export PG_DATABASE_URL="postgres://${cfg.database.user}:$(cat /secrets/twenty-db-password)@db:5432/default"
+            ''}
+            ${lib.optionalString (cfg.appSecretFile != null) ''
+              export APP_SECRET="$(cat /secrets/twenty-app-secret)"
+            ''}
+            exec /app/entrypoint.sh "$@"
+          ''
+        ];
         
         depends_on = {
           db = {
