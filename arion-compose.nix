@@ -153,7 +153,7 @@ in
             ${lib.optionalString (cfg.appSecretFile != null) ''
               export APP_SECRET="$(cat /secrets/twenty-app-secret)"
             ''}
-            exec /app/entrypoint.sh node dist/src/main
+            exec node dist/src/main
           ''
         ];
         
@@ -201,7 +201,7 @@ in
               ${lib.optionalString (cfg.appSecretFile != null) ''
                 export APP_SECRET="$(cat /secrets/twenty-app-secret)"
               ''}
-              exec /app/entrypoint.sh yarn worker:prod
+              exec yarn worker:prod
             ''
           ])
         ];
