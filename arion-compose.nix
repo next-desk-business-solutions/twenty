@@ -70,9 +70,9 @@ let
     }
   ) // lib.optionalAttrs cfg.auth.google.enabled (
     lib.optionalAttrs (cfg.auth.google.clientIdFile != null) {
-      AUTH_GOOGLE_CLIENT_ID = readSecret cfg.auth.google.clientIdFile;
+      AUTH_GOOGLE_CLIENT_ID = "$(cat /secrets/google-client-id)";
     } // lib.optionalAttrs (cfg.auth.google.clientSecretFile != null) {
-      AUTH_GOOGLE_CLIENT_SECRET = readSecret cfg.auth.google.clientSecretFile;
+      AUTH_GOOGLE_CLIENT_SECRET = "$(cat /secrets/google-client-secret)";
     } // {
       MESSAGING_PROVIDER_GMAIL_ENABLED = "true";
       CALENDAR_PROVIDER_GOOGLE_ENABLED = "true";
@@ -81,9 +81,9 @@ let
     }
   ) // lib.optionalAttrs cfg.auth.microsoft.enabled (
     lib.optionalAttrs (cfg.auth.microsoft.clientIdFile != null) {
-      AUTH_MICROSOFT_CLIENT_ID = readSecret cfg.auth.microsoft.clientIdFile;
+      AUTH_MICROSOFT_CLIENT_ID = "$(cat /secrets/microsoft-client-id)";
     } // lib.optionalAttrs (cfg.auth.microsoft.clientSecretFile != null) {
-      AUTH_MICROSOFT_CLIENT_SECRET = readSecret cfg.auth.microsoft.clientSecretFile;
+      AUTH_MICROSOFT_CLIENT_SECRET = "$(cat /secrets/microsoft-client-secret)";
     } // {
       CALENDAR_PROVIDER_MICROSOFT_ENABLED = "true";
       MESSAGING_PROVIDER_MICROSOFT_ENABLED = "true";
@@ -103,9 +103,9 @@ let
     } // lib.optionalAttrs (cfg.email.smtp.port != null) {
       EMAIL_SMTP_PORT = toString cfg.email.smtp.port;
     } // lib.optionalAttrs (cfg.email.smtp.userFile != null) {
-      EMAIL_SMTP_USER = readSecret cfg.email.smtp.userFile;
+      EMAIL_SMTP_USER = "$(cat /secrets/smtp-user)";
     } // lib.optionalAttrs (cfg.email.smtp.passwordFile != null) {
-      EMAIL_SMTP_PASSWORD = readSecret cfg.email.smtp.passwordFile;
+      EMAIL_SMTP_PASSWORD = "$(cat /secrets/smtp-password)";
     }
   );
   
