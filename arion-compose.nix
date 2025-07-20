@@ -200,7 +200,10 @@ in
     db = {
       service = {
         image = "postgres:16";
-        ports = [ "5432:5432" ];
+        
+        # SECURITY: Only bind to localhost, not all interfaces
+        ports = [ "127.0.0.1:5432:5432" ];
+        
         volumes = [
           "db-data:/var/lib/postgresql/data"
         ] ++ secretVolumes;
@@ -229,7 +232,10 @@ in
     redis = {
       service = {
         image = "redis:latest";
-        ports = [ "6379:6379" ];
+        
+        # SECURITY: Only bind to localhost, not all interfaces
+        ports = [ "127.0.0.1:6379:6379" ];
+        
         command = [ "--maxmemory-policy" "noeviction" ];
         restart = "always";
       };
