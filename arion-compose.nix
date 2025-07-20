@@ -201,7 +201,7 @@ in
       service = {
         image = "postgres:16";
         
-        # SECURITY: Only bind to localhost, not all interfaces
+        # SECURITY: Bind to localhost only for n8n access
         ports = [ "127.0.0.1:5432:5432" ];
         
         volumes = [
@@ -233,8 +233,8 @@ in
       service = {
         image = "redis:latest";
         
-        # SECURITY: Only bind to localhost, not all interfaces
-        ports = [ "127.0.0.1:6379:6379" ];
+        # SECURITY: No host port binding - Docker network only
+        # Outline connects via shared Twenty network
         
         command = [ "--maxmemory-policy" "noeviction" ];
         restart = "always";
